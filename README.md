@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plaid Income Tracking
+
+A simple app for tracking income from different payment methods in your bank statements. Built to help identify and categorize payments from Zelle, Venmo, ACH deposits, and other sources.
+
+## How It Works
+
+Upload a CSV export from your bank, and the app helps you track and categorize incoming payments. You can assign transactions to tenants/payers and keep tabs on who's paid what.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to use the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Current State
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This is a local-first app - data is stored in JSON files and hardcoded locally (yes, really). It works great for personal use but isn't production-ready.
 
-## Learn More
+**What's included:**
+- CSV upload and parsing for bank statements
+- Transaction categorization and assignment
+- Basic Plaid integration scaffolding
 
-To learn more about Next.js, take a look at the following resources:
+## Future Improvements
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+A few ideas if you want to take this further:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Database** - Swap out the JSON files for a real database
+- **Plaid Production** - Apply for production credentials to pull transactions directly from your bank
+- **Auto-tagging** - ML models to automatically categorize and assign transactions based on patterns
 
-## Deploy on Vercel
+## Plaid Setup (Optional)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+If you want to use Plaid's bank connection features:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Sign up at [plaid.com](https://plaid.com)
+2. Create a `.env.local` file with your credentials:
+   ```
+   PLAID_CLIENT_ID=your_client_id
+   PLAID_SECRET=your_secret
+   PLAID_ENV=sandbox
+   ```
+3. Note: Sandbox only provides test data. Production access requires Plaid approval.
