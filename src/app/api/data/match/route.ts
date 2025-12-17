@@ -37,20 +37,31 @@ export async function POST() {
         }
 
         const depositAmount = Math.abs(deposit.amount);
-        const minAmount = tenant.expectedRent - tenant.tolerance;
-        const maxAmount = tenant.expectedRent + tenant.tolerance;
+        let isMatch = false;
 
-        // Check amount
-        if (depositAmount < minAmount || depositAmount > maxAmount) {
-          continue;
+        // Check based on match mode (default to searchTerms for backward compatibility)
+        const matchMode = tenant.matchMode || 'searchTerms';
+
+        if (matchMode === 'exactAmounts') {
+          // Exact amount matching - check if amount matches any specified amount
+          const exactAmounts = tenant.exactAmounts || [];
+          isMatch = exactAmounts.some(amount =>
+            Math.abs(depositAmount - amount) < 0.01 // Handle floating point comparison
+          );
+        } else {
+          // Search terms mode - check amount tolerance + search terms
+          const minAmount = tenant.expectedRent - tenant.tolerance;
+          const maxAmount = tenant.expectedRent + tenant.tolerance;
+
+          if (depositAmount >= minAmount && depositAmount <= maxAmount) {
+            // Check search terms (skip empty strings)
+            isMatch = tenant.searchTerms.some(term =>
+              term.trim() !== '' && description.includes(term.toUpperCase())
+            );
+          }
         }
 
-        // Check search terms
-        const termMatch = tenant.searchTerms.some(term =>
-          description.includes(term.toUpperCase())
-        );
-
-        if (termMatch) {
+        if (isMatch) {
           // Auto-assign this transaction to the tenant
           addTenantTransaction(tenant.id, deposit.transactionId, false);
           assignedIds.add(deposit.transactionId); // Prevent double-matching

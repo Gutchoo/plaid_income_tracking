@@ -35,6 +35,8 @@ export interface Tenant {
   tolerance: number;
   searchTerms: string[];
   accountId: string; // which account to look for payments in
+  matchMode: 'searchTerms' | 'exactAmounts'; // how to match transactions
+  exactAmounts: number[]; // for exactAmounts mode - match these specific amounts
 }
 
 export interface RentPayment {
@@ -276,6 +278,66 @@ export function removeTenantTransaction(transactionId: string): void {
 export function removeTenantTransactionsForTenant(tenantId: string): void {
   const transactions = getTenantTransactions().filter(tt => tt.tenantId !== tenantId);
   writeJsonFile('tenant-transactions.json', transactions);
+}
+
+// Re-evaluate auto-matched transactions for a tenant after their criteria change
+// Removes auto-matched transactions that no longer match, keeps manual ones
+export function reEvaluateTenantMatches(tenant: Tenant): number {
+  const tenantTransactions = getTenantTransactions();
+  const allTransactions = getTransactions();
+
+  // Get auto-matched transactions for this tenant (not manually assigned)
+  const autoMatched = tenantTransactions.filter(
+    tt => tt.tenantId === tenant.id && !tt.manualOverride
+  );
+
+  const transactionsToRemove: string[] = [];
+  const matchMode = tenant.matchMode || 'searchTerms';
+
+  for (const tt of autoMatched) {
+    const transaction = allTransactions.find(t => t.transactionId === tt.transactionId);
+    if (!transaction) {
+      // Transaction no longer exists, remove the link
+      transactionsToRemove.push(tt.transactionId);
+      continue;
+    }
+
+    const depositAmount = Math.abs(transaction.amount);
+    let stillMatches = false;
+
+    if (matchMode === 'exactAmounts') {
+      // Exact amount matching
+      const exactAmounts = tenant.exactAmounts || [];
+      stillMatches = exactAmounts.some(amount =>
+        Math.abs(depositAmount - amount) < 0.01
+      );
+    } else {
+      // Search terms mode
+      const description = `${transaction.name} ${transaction.merchantName || ''}`.toUpperCase();
+      const minAmount = tenant.expectedRent - tenant.tolerance;
+      const maxAmount = tenant.expectedRent + tenant.tolerance;
+
+      if (depositAmount >= minAmount && depositAmount <= maxAmount) {
+        stillMatches = tenant.searchTerms.some(term =>
+          term.trim() !== '' && description.includes(term.toUpperCase())
+        );
+      }
+    }
+
+    if (!stillMatches) {
+      transactionsToRemove.push(tt.transactionId);
+    }
+  }
+
+  // Remove transactions that no longer match
+  if (transactionsToRemove.length > 0) {
+    const remaining = tenantTransactions.filter(
+      tt => !transactionsToRemove.includes(tt.transactionId)
+    );
+    writeJsonFile('tenant-transactions.json', remaining);
+  }
+
+  return transactionsToRemove.length;
 }
 
 // Rejected Matches (prevents auto-matching from re-assigning removed transactions)
